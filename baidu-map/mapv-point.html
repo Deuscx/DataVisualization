@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="utf-8" />
+    <title>散点图</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <style>
+        body,
+        html,
+        #map_container {
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            font-family: "微软雅黑";
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map_container"></div>
+</body>
+
+</html>
+<script src="./secret.js"></script>
+<script src="//mapv.baidu.com/gl/examples/static/common.js"></script>
+<script src="https://code.bdstatic.com/npm/mapvgl@1.0.0-beta.89/dist/mapvgl.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mapv@2.0.59/build/mapv.min.js"></script>
+<script>
+    function loadJScript() {
+        return new Promise((resolve, reject) => {
+            var script = document.createElement("script");
+            script.type = "text/javascript";
+            //callback 表示在script加载后 会执行window中的init方法
+            script.src = `//api.map.baidu.com/api?type=webgl&v=3.0&ak=${secret}&callback=init`;
+
+            document.body.appendChild(script);
+            resolve()
+        })
+    }
+
+    function init() {
+        var map = initMap({
+            tilt: 0,
+            heading: 0.3,
+            center: [109.792816, 27.702774],
+            zoom: 5,
+            style: whiteStyle,
+            skyColors: [
+                // 地面颜色
+                'rgba(226, 237, 248, 0)',
+                // 天空颜色
+                'rgba(186, 211, 252, 1)'
+            ]
+        });
+
+        //准备数据源
+        var data = [];
+
+        var cities = [
+            '北京', '天津', '上海', '重庆', '石家庄', '太原', '呼和浩特', '哈尔滨',
+            '长春', '沈阳', '济南', '南京', '合肥', '杭州', '南昌', '福州', '郑州',
+            '武汉', '长沙', '广州', '南宁', '西安', '银川', '兰州', '西宁', '乌鲁木齐',
+            '成都', '贵阳', '昆明', '拉萨', '海口'
+        ];
+        cities.forEach(name => {
+            let cityCenter = mapv.utilCityCenter.getCenterByCityName(name);
+            data.push({
+                geometry: {
+                    type: 'Point',
+                    coordinates: [cityCenter.lng, cityCenter.lat]
+                },
+                properties: { //可以通过properties中的数据，生成不同样式的point
+
+                    count: parseInt(10 * Math.random(), 10)
+                }
+            })
+        })
+        console.log(data)
+        // 通过 intensity 值域组件，可以按照权重值的强度获取对应渐变色中的颜色或半径大小的值
+        var intensity = new mapvgl.Intensity({
+            maxSize: 60, // 定义最大的半径大小值
+            minSize: 20,
+            min: 0,
+            max: 10, // 最大权重值
+            gradient: { // 渐变色设置
+                0.25: "#e0ece4",
+                0.55: "#ff4b5c",
+                0.85: "#056674",
+                1.0: "#66bfbf"
+            }
+
+        });
+        //绘制数据源
+
+        //1.生成mapvgl 视图View
+        var view = new mapvgl.View({
+            map: map
+        });
+        // 2.初始化Point对象
+        var pointLayer = new mapvgl.PointLayer({
+            blend: 'lighter',
+            size: function (item) {
+                let {
+                    properties: {
+                        count
+                    }
+                } = item;
+                return intensity.getSize(count)
+            },
+            color: function (item) { //size也可以如此操作
+                let {
+                    properties: {
+                        count
+                    }
+                } = item
+                return intensity.getColor(count)
+                /* if (count === 1) {
+                    return 'rgb(191, 67, 66, 0.8)';
+                } else if (count === 2) {
+                    return 'rgb(211, 139, 93, 0.8)';
+                } else if (count === 3) {
+                    return 'rgb(44, 85, 48, 0.8)';
+                } else {
+                    return 'rgb(115, 158, 130, 0.8)';
+                } */
+            }
+        });
+
+        //3.将Point对象加入View中
+        view.addLayer(pointLayer);
+        pointLayer.setData(data);
+    }
+
+
+    window.addEventListener('DOMContentLoaded', async () => {
+        await loadJScript();
+    })
+</script>
