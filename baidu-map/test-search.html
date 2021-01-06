@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="utf-8" />
+    <title>异步加载地图</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <style>
+        html,
+        body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -10;
+        }
+
+        #container {
+            position: relative;
+
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            font-family: "微软雅黑";
+        }
+
+
+
+        #r-result,
+        #r-result table {
+            width: 265px;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            right: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            z-index: 10;
+            background: #fff;
+            padding: 10px 7px 10px 8px;
+        }
+
+        #form {
+            z-index: 10;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container"></div>
+    <div id="r-result"></div>
+
+    <form id="form">
+        <input type="text" id="start" name="start" placeholder="请输入起点" required autofocus>
+        <input type="text" id="end" name="end" placeholder="请输入终点" required>
+        <button type="submit">确定</button>
+    </form>
+</body>
+
+</html>
+
+<script>
+    function loadJScript() {
+        return new Promise((resolve, reject) => {
+            var script = document.createElement("script");
+            //更换成你的密钥
+            let secret = 'leeRDmlFem0RjdPLQvGV0VWjkSrgkdpM';
+            script.type = "text/javascript";
+            //callback 表示在script加载后 会执行window中的init方法
+            script.src = `//api.map.baidu.com/api?type=webgl&v=3.0&ak=${secret}&callback=init`;
+
+            document.body.appendChild(script);
+            resolve()
+        })
+    }
+
+    function init() {
+        var map = new BMapGL.Map("container", {
+            minZoom: 4, //设置地图允许的最大最小级别
+            maxZoom: 20
+        }); // 创建Map实例
+        var point = new BMapGL.Point(116.404, 39.915);
+        map.centerAndZoom(point, 12); // 初始化地图,设置中心点坐标和地图级别
+        map.enableScrollWheelZoom(true); // 开启鼠标滚轮缩放
+
+
+        /* 设置3D 视角 */
+        map.setHeading(64.5); //旋转方向
+        map.setTilt(73); //倾斜角度 
+
+
+        /* 添加控件 */
+        // 1.比例尺控件
+        var scaleCtrl = new BMapGL.ScaleControl(); // 添加比例尺控件
+        map.addControl(scaleCtrl);
+        var zoomCtrl = new BMapGL.ZoomControl({
+            anchor: BMAP_ANCHOR_TOP_RIGHT //控件停靠位置
+        }); // 添加比例尺控件
+        map.addControl(zoomCtrl);
+
+
+        let form = document.getElementById('form');
+        let start = form.querySelector('#start')
+        let end = form.querySelector('#end')
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            console.log(start.value, end.value)
+            let walking = new BMapGL.WalkingRoute(map, {
+                renderOptions: {
+                    map: map,
+                    panel: "r-result",
+                    autoViewport: true
+                }
+            });
+            walking.search(start.value, end.value);
+        })
+
+        let local = new BMapGL.LocalSearch(map, {
+            renderOptions: {
+                map: map,
+                panel: "r-result"
+            }
+        });
+
+        start.addEventListener('input', function () {
+            local.search(this.value);
+        })
+        end.addEventListener('input', function () {
+            local.search(this.value);
+        })
+    }
+
+
+    window.addEventListener('DOMContentLoaded', async () => {
+        await loadJScript();
+    })
+</script>
